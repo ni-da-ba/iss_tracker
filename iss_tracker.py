@@ -213,7 +213,7 @@ def get_data():
     Accesses the ISS positional data from the internet, and formats it from XML into a dictionary.
 
     Returns:
-           The ISS positional data from the internet, formatted into a dictionary.
+           data (List): The ISS positional data from the internet, formatted into a dictionary.
     """
     try:
         response = requests.get(url='https://nasa-public-data.s3.amazonaws.com/iss-coords/current/ISS_OEM/ISS.OEM_J2K_EPH.xml')
@@ -223,9 +223,28 @@ def get_data():
         logging.critical('Unable to request and load data from the internet. Ensure that the data is accessible.')
         sys.exit(1)
 
+def get_comment(data: List[dict]) -> List[str]:
+    """
+    Parses through a list of dictionaries in ISS dataset format and returns the comment list.
+
+    Args:
+        data (List): The list of data to be parsed.
+    """
+    return(data['ndm']['oem']['body']['segment']['data']['COMMENT'])
+    
 #Traditional typehinting does not seem to work with flask routes. I have tried to
 #offset this by defining almost all the functionality of these routes elsewhere.
-        
+
+@app.route('/comment', methods=['GET'])
+def comment_request():
+    """
+    Takes input from an incoming request for the comment values of the data and returns
+    those values.
+    """
+    data = get_data()
+    working_data = get_comment(data)
+    return(working_data)
+
 @app.route('/epochs', methods=['GET'])
 def index_request():
     """
