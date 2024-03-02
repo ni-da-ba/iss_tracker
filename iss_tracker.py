@@ -244,10 +244,30 @@ def get_header(data: List[dict]) -> List[dict]:
            header (List): The header of the data set.
     """
     return(data['ndm']['oem']['header'])
+
+def get_meta(data: List[dict]) -> List[dict]:
+    """
+    Parses through a list of dictionaries in the ISS dataset format and returns the metadata.
     
+    Args:
+        data (List): The list of data to be parsed.
+    Returns:
+           metadata (List): The metadata of the data set.
+    """
+    return(data['ndm']['oem']['body']['segment']['metadata'])
+
 #Traditional typehinting does not seem to work with flask routes. I have tried to
 #offset this by defining almost all the functionality of these routes elsewhere.
 
+@app.route('/metadata', methods=['GET'])
+def meta_reqiest():
+    """
+    Takes an incoming request for the metadata of the data and returns those values.
+    """
+    data = get_data()
+    working_data = get_meta(data)
+    return(working_data)
+    
 @app.route('/header', methods=['GET'])
 def header_request():
     """

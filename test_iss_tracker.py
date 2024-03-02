@@ -15,6 +15,7 @@ from iss_tracker import cartesian_velocity_to_speed
 from iss_tracker import fetch_index_request
 from iss_tracker import get_comment
 from iss_tracker import get_header
+from iss_tracker import get_meta
 # Global variables / constants
 
 # Class definitions
@@ -75,6 +76,10 @@ def test_get_header(data: List[dict]) -> None:
     """
     working_data = data['ndm']['oem']['header']
     assert get_header(data) == working_data
+
+def test_get_meta(data: List[dict]) -> None:
+    working_data = data['ndm']['oem']['body']['segment']['metadata']
+    assert get_meta(data) == working_data
     
 # Main function definition
 def main():
@@ -93,6 +98,7 @@ def main():
     test_fetch_index_request(data)
     test_get_comment(data)
     test_get_header(data)
+    test_get_meta(data)
     
     print("All tests completed.")
     
