@@ -229,11 +229,33 @@ def get_comment(data: List[dict]) -> List[str]:
 
     Args:
         data (List): The list of data to be parsed.
+    Returns:
+           comment (List): The comments of the data set.
     """
     return(data['ndm']['oem']['body']['segment']['data']['COMMENT'])
+
+def get_header(data: List[dict]) -> List[dict]:
+    """
+    Parses through a list of dictionaties in ISS dataset format and returns the header.
+
+    Args:
+        data (List): The list of data to be parsed.
+    Returns:
+           header (List): The header of the data set.
+    """
+    return(data['ndm']['oem']['header'])
     
 #Traditional typehinting does not seem to work with flask routes. I have tried to
 #offset this by defining almost all the functionality of these routes elsewhere.
+
+@app.route('/header', methods=['GET'])
+def header_request():
+    """
+    Takes an incoming request for the header values of the data and returns those values.
+    """
+    data = get_data()
+    working_data = get_header(data)
+    return(working_data)
 
 @app.route('/comment', methods=['GET'])
 def comment_request():

@@ -14,6 +14,7 @@ from iss_tracker import fetch_epoch_data
 from iss_tracker import cartesian_velocity_to_speed
 from iss_tracker import fetch_index_request
 from iss_tracker import get_comment
+from iss_tracker import get_header
 # Global variables / constants
 
 # Class definitions
@@ -62,8 +63,18 @@ def test_fetch_index_request(data: List[dict]) -> None:
     assert fetch_index_request(working_data, 0, 99999999) == working_data
 
 def test_get_comment(data: List[dict]) -> None:
+    """
+    This runs tests on the 'get_comment' function to ensure it returns the proper values and handles errors.
+    """
     working_data = data['ndm']['oem']['body']['segment']['data']['COMMENT']
     assert get_comment(data) == working_data
+
+def test_get_header(data: List[dict]) -> None:
+    """
+    This runs tests on the 'get_header' function to ensure it returns the proper values and handles errors.
+    """
+    working_data = data['ndm']['oem']['header']
+    assert get_header(data) == working_data
     
 # Main function definition
 def main():
@@ -81,6 +92,7 @@ def main():
     test_cartesian_velocity_to_speed()
     test_fetch_index_request(data)
     test_get_comment(data)
+    test_get_header(data)
     
     print("All tests completed.")
     
