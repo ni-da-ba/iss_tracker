@@ -16,6 +16,7 @@ from iss_tracker import fetch_index_request
 from iss_tracker import get_comment
 from iss_tracker import get_header
 from iss_tracker import get_meta
+from iss_tracker import xyz_to_blh
 # Global variables / constants
 
 # Class definitions
@@ -80,7 +81,20 @@ def test_get_header(data: List[dict]) -> None:
 def test_get_meta(data: List[dict]) -> None:
     working_data = data['ndm']['oem']['body']['segment']['metadata']
     assert get_meta(data) == working_data
-    
+
+def test_xyz_to_blh() -> None:
+    beilat, beilon, beihgt = xyz_to_blh(-2148778.283, 4426643.490, 4044675.194)
+    assert round(beilat, 4) == 39.6086
+    assert round(beilon, 4) == 115.8928
+    assert round(beihgt, 2) == 112.78
+
+    boglat, boglon, boghgt = xyz_to_blh(1744433.521, -6116034.660, 512736.584)
+    assert round(boglat, 4) == 4.6401
+    assert round(boglon, 4) == -74.0806
+
+    isslat, isslon, isshgt = xyz_to_blh(-4510.2613026051904 * 1000, -1213.2390524027301 * 1000, 4931.7882870748199 * 1000)
+    print(isslat)
+    print(isslon)
 # Main function definition
 def main():
     #--Data processing--
@@ -99,6 +113,7 @@ def main():
     test_get_comment(data)
     test_get_header(data)
     test_get_meta(data)
+    test_xyz_to_blh()
     
     print("All tests completed.")
     

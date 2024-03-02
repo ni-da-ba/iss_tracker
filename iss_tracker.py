@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 import calendar
 import math
 from flask import Flask, request
+from geopy.geocoders import Nominatim
 
 #Global variables / constants
 app = Flask(__name__)
@@ -256,6 +257,51 @@ def get_meta(data: List[dict]) -> List[dict]:
     """
     return(data['ndm']['oem']['body']['segment']['metadata'])
 
+def xyz_to_blh(x: float, y: float, z: float) -> (float, float, float):
+    """
+    Takes a coordinate in XYZ (cartesian) form and converts it to BLH (geodesic) form.
+    Credit for calculation goes to purpleskyfall on github. Inputs must be in meters.
+    
+    Args:
+        x (float): The cartesian x coordinate.
+        y (float): The cartesian y coordiante.
+        z (float): The cartesian z coordinate.
+    Returns:
+           latitude (float): The latitude coordinate.
+           longitude (float): The longitude coordinate.
+           height (float): The height coordinate 
+    """
+    A = 6378137.0
+    B = 6356752.314245
+    
+    e = math.sqrt(1 - (B**2)/(A**2))
+    # calculate longitude, in radians
+    longitude = math.atan2(y, x)
+    
+    # calculate latitude, in radians
+    xy_hypot = math.hypot(x, y)
+    
+    lat0 = 0
+    latitude = math.atan(z / xy_hypot)
+    
+    while abs(latitude - lat0) > 1E-9:
+        lat0 = latitude
+        N = A / math.sqrt(1 - e**2 * math.sin(lat0)**2)
+        latitude = math.atan((z + e**2 * N * math.sin(lat0)) / xy_hypot)
+        
+        # calculate height, in meters
+    N = A / math.sqrt(1 - e**2 * math.sin(latitude)**2)
+    if abs(latitude) < math.pi / 4:
+        R, phi = math.hypot(xy_hypot, z), math.atan(z / xy_hypot)
+        height = R * math.cos(phi) / math.cos(latitude) - N
+    else:
+        height = z / math.sin(latitude) - N * (1 - e**2)
+        
+    # convert angle unit to degrees
+    longitude = math.degrees(longitude)
+    latitude = math.degrees(latitude)
+        
+    return latitude, longitude, height
 #Traditional typehinting does not seem to work with flask routes. I have tried to
 #offset this by defining almost all the functionality of these routes elsewhere.
 
