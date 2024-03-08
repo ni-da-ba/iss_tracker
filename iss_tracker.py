@@ -11,6 +11,10 @@ from typing import List
 from datetime import datetime, timezone
 import calendar
 import math
+import time
+from astropy import coordinates
+from astropy import units
+from astropy.time import Time
 from flask import Flask, request
 from geopy.geocoders import Nominatim
 
@@ -62,6 +66,9 @@ def convert_iso_dis_8601(standard_time: str) -> str:
         days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
         month = int(convert_sec[1])
 
+        if(int(convert_sec[0])%4==0):
+            days_per_month[1] = 29
+        
         days = sum(days_per_month[:month-1], int(convert_sec[2]))
         
         days_string = str(days)
@@ -257,51 +264,21 @@ def get_meta(data: List[dict]) -> List[dict]:
     """
     return(data['ndm']['oem']['body']['segment']['metadata'])
 
-def xyz_to_blh(x: float, y: float, z: float) -> (float, float, float):
-    """
-    Takes a coordinate in XYZ (cartesian) form and converts it to BLH (geodesic) form.
-    Credit for calculation goes to purpleskyfall on github. Inputs must be in meters.
+#Following function is taken directly from slack.
+def compute_location_astropy(sv):
+    x = float(sv['X']['#text'])
+    y = float(sv['Y']['#text'])
+    z = float(sv['Z']['#text'])
     
-    Args:
-        x (float): The cartesian x coordinate.
-        y (float): The cartesian y coordiante.
-        z (float): The cartesian z coordinate.
-    Returns:
-           latitude (float): The latitude coordinate.
-           longitude (float): The longitude coordinate.
-           height (float): The height coordinate 
-    """
-    A = 6378137.0
-    B = 6356752.314245
+    # assumes epoch is in format '2024-067T08:28:00.000Z'
+    this_epoch=time.strftime('%Y-%m-%d %H:%m:%S', time.strptime(sv['EPOCH'][:-5], '%Y-%jT%H:%M:%S'))
     
-    e = math.sqrt(1 - (B**2)/(A**2))
-    # calculate longitude, in radians
-    longitude = math.atan2(y, x)
+    cartrep = coordinates.CartesianRepresentation([x, y, z], unit=units.km)
+    gcrs = coordinates.GCRS(cartrep, obstime=this_epoch)
+    itrs = gcrs.transform_to(coordinates.ITRS(obstime=this_epoch))
+    loc = coordinates.EarthLocation(*itrs.cartesian.xyz)
     
-    # calculate latitude, in radians
-    xy_hypot = math.hypot(x, y)
-    
-    lat0 = 0
-    latitude = math.atan(z / xy_hypot)
-    
-    while abs(latitude - lat0) > 1E-9:
-        lat0 = latitude
-        N = A / math.sqrt(1 - e**2 * math.sin(lat0)**2)
-        latitude = math.atan((z + e**2 * N * math.sin(lat0)) / xy_hypot)
-        
-        # calculate height, in meters
-    N = A / math.sqrt(1 - e**2 * math.sin(latitude)**2)
-    if abs(latitude) < math.pi / 4:
-        R, phi = math.hypot(xy_hypot, z), math.atan(z / xy_hypot)
-        height = R * math.cos(phi) / math.cos(latitude) - N
-    else:
-        height = z / math.sin(latitude) - N * (1 - e**2)
-        
-    # convert angle unit to degrees
-    longitude = math.degrees(longitude)
-    latitude = math.degrees(latitude)
-        
-    return latitude, longitude, height
+    return loc.lat.value, loc.lon.value, loc.height.value
 #Traditional typehinting does not seem to work with flask routes. I have tried to
 #offset this by defining almost all the functionality of these routes elsewhere.
 
@@ -392,6 +369,27 @@ def speed_request(epoch):
     result = cartesian_velocity_to_speed(x_dot,y_dot,z_dot)
     return(str(result)+' km/s\n')
 
+@app.route('/epochs/<epoch>/location', methods=['GET'])
+def location_request(epoch):
+    """
+    Takes a request for the locational data of a specific epoch in the data set.
+    Calculates longitude, latitude, altitude, and geolocation for the epoch and returns it.
+
+    Returns:
+           result( (List): The locational data of the request epoch.
+    """
+    data = get_data()
+    working_data = data['ndm']['oem']['body']['segment']['data']['stateVector']
+    epoch_request = fetch_epoch_data(working_data, epoch)
+
+    if(epoch_request==[]):
+        return("Encountered invalid epoch. Operation aborted.\n")
+
+    coordinates = compute_location_astropy(epoch_request)
+    coordinate_lat = {}
+    
+    return(coordinates_list)
+
 @app.route('/now', methods=['GET'])
 def now_request():
     """
@@ -413,9 +411,19 @@ def now_request():
     z_dot = float(epoch_matched['Z_DOT']['#text'])
     current_speed = cartesian_velocity_to_speed(x_dot,y_dot,z_dot)
 
-    speed_data = {"SPEED": {"#text": current_speed, "@units": "km/s"}}
+    speed_data = {"#text": current_speed, "@units": "km/s"}
+
+    coordinates = compute_location_astropy(epoch_matched)
+    coordinate_lat = {"#text": coordinates[0], "@units": "deg"}
+    coordinate_lon = {"#text": coordinates[1], "@units": "deg"}
+    coordinate_alt = {"#text": coordinates[2], "@units": "deg"}
+
+    epoch_matched["SPEED"] = speed_data
+    epoch_matched["LATITUDE"] = coordinate_lat
+    epoch_matched["LONGITUDE"] = coordinate_lon
+    epoch_matched["ALTITUDE"] = coordinate_alt
     
-    result = [epoch_matched, speed_data]    
+    result = epoch_matched    
     return(result)
 
 #Main function definition
