@@ -386,9 +386,15 @@ def location_request(epoch):
         return("Encountered invalid epoch. Operation aborted.\n")
 
     coordinates = compute_location_astropy(epoch_request)
-    coordinate_lat = {}
+    coordinate_lat = {"#text": coordinates[0], "@units": "deg"}
+    coordinate_lon = {"#text": coordinates[1], "@units": "deg"}
+    coordinate_alt = {"#text": coordinates[2], "@units": "deg"}
     
-    return(coordinates_list)
+    epoch_request["LATITUDE"] = coordinate_lat
+    epoch_request["LONGITUDE"] = coordinate_lon
+    epoch_request["ALTITUDE"] = coordinate_alt
+    
+    return(epoch_request)
 
 @app.route('/now', methods=['GET'])
 def now_request():
