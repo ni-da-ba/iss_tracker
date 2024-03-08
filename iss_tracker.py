@@ -389,12 +389,20 @@ def location_request(epoch):
     coordinate_lat = {"#text": coordinates[0], "@units": "deg"}
     coordinate_lon = {"#text": coordinates[1], "@units": "deg"}
     coordinate_alt = {"#text": coordinates[2], "@units": "deg"}
+
+    result = {}
+    result["LATITUDE"] = coordinate_lat
+    result["LONGITUDE"] = coordinate_lon
+    result["ALTITUDE"] = coordinate_alt
+
+    geocoder = Nominatim(user_agent='iss_tracker')
+    geo_location = geocoder.reverse((coordinates[0],coordinates[1]), zoom=15, language='en')
+    if(geo_location)==None:
+        geo_location = "Far from any location, perhaps over an ocean."
+        result["GEOLOCATION"] = geo_location
+    result["GEOLOCATION"] = geo_location.address
     
-    epoch_request["LATITUDE"] = coordinate_lat
-    epoch_request["LONGITUDE"] = coordinate_lon
-    epoch_request["ALTITUDE"] = coordinate_alt
-    
-    return(epoch_request)
+    return(result)
 
 @app.route('/now', methods=['GET'])
 def now_request():
