@@ -436,6 +436,13 @@ def now_request():
     epoch_matched["LATITUDE"] = coordinate_lat
     epoch_matched["LONGITUDE"] = coordinate_lon
     epoch_matched["ALTITUDE"] = coordinate_alt
+
+    geocoder = Nominatim(user_agent='iss_tracker')
+    geo_location = geocoder.reverse((coordinates[0],coordinates[1]), zoom=15, language='en')
+    if(geo_location)==None:
+        geo_location = "Far from any location, perhaps over an ocean."
+        epoch_matched["GEOLOCATION"] = geo_location
+    epoch_matched["GEOLOCATION"] = geo_location.address
     
     result = epoch_matched    
     return(result)
