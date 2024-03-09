@@ -1,0 +1,13 @@
+---
+version: "3"
+
+services:
+	flask-app:
+	build:
+		context: ./
+		dockerfile: ./Dockerfile
+	image: nidaba936/iss_tracker:1.0
+	container_name: iss_trackep
+	ports:
+		- "5000:5000"
+...
