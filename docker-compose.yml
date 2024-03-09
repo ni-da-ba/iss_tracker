@@ -4,10 +4,10 @@ version: "3"
 services:
     iss_tracker:
           build:
-	      context: ./
-	      dockerfile: ./Dockerfile
-	  image: nidaba936/iss_tracker:1.0
-	  container_name: iss_tracker
-	  ports:
+              context: ./
+              dockerfile: ./Dockerfile
+          image: nidaba936/iss_tracker:1.0
+          container_name: iss_tracker
+          ports:
               - "5000:5000"
 ...
