@@ -50,7 +50,7 @@ docker-compose up -d
 
 Then, you may access the functionality of the program with the basis:
 ```
-curl 'localhost:5000/'
+curl 'localhost:5000'
 ```
 After the `5000` but before the ```'```:
 
