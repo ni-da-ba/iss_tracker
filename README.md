@@ -16,6 +16,8 @@ A file that will give anybody perusing the repository a solid idea of the projec
 A file that is necessary for the functionality of the program as a containerized application using Docker but not of great import to the user. Contains instructions on how the application is to be built and deployed using Docker.
 ### ```docker-compose.yml```
 A yaml file that contains the second half of the deployment process with Docker. This automates the commands that are usually required to run a containerized program with Docker, making the entire process much easier on the user. 
+### ```requirements.txt```
+A text file that contains the dependencies of this program, streamlining the build process with Docker.
 ### ```diagram.png```
 A software diagram that is intended to clarify the overall file and software structure of the project. Contains visual aids that may clarify points of confusion. 
 ## Usage
