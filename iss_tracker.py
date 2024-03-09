@@ -405,7 +405,7 @@ def location_request(epoch):
         coordinates = compute_location_astropy(epoch_request)
         coordinate_lat = {"#text": coordinates[0], "@units": "deg"}
         coordinate_lon = {"#text": coordinates[1], "@units": "deg"}
-        coordinate_alt = {"#text": coordinates[2], "@units": "deg"}
+        coordinate_alt = {"#text": coordinates[2], "@units": "km"}
         
         result = {}
         result["LATITUDE"] = coordinate_lat
@@ -450,7 +450,7 @@ def now_request():
         coordinates = compute_location_astropy(epoch_matched)
         coordinate_lat = {"#text": coordinates[0], "@units": "deg"}
         coordinate_lon = {"#text": coordinates[1], "@units": "deg"}
-        coordinate_alt = {"#text": coordinates[2], "@units": "deg"}
+        coordinate_alt = {"#text": coordinates[2], "@units": "km"}
         
         epoch_matched["SPEED"] = speed_data
         epoch_matched["LATITUDE"] = coordinate_lat
