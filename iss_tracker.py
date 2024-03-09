@@ -283,22 +283,27 @@ def compute_location_astropy(sv):
 #offset this by defining almost all the functionality of these routes elsewhere.
 
 @app.route('/metadata', methods=['GET'])
-def meta_reqiest():
+def meta_request():
     """
     Takes an incoming request for the metadata of the data and returns those values.
     """
-    data = get_data()
-    working_data = get_meta(data)
-    return(working_data)
-    
+    try:
+        data = get_data()
+        working_data = get_meta(data)
+        return(working_data)
+    except:
+        return("Encountered error requesting metadata. Aborting.\n")
 @app.route('/header', methods=['GET'])
 def header_request():
     """
     Takes an incoming request for the header values of the data and returns those values.
     """
-    data = get_data()
-    working_data = get_header(data)
-    return(working_data)
+    try:
+        data = get_data()
+        working_data = get_header(data)
+        return(working_data)
+    except:
+        return("Encountered error requesting header. Aborting.\n")
 
 @app.route('/comment', methods=['GET'])
 def comment_request():
@@ -306,10 +311,12 @@ def comment_request():
     Takes input from an incoming request for the comment values of the data and returns
     those values.
     """
-    data = get_data()
-    working_data = get_comment(data)
-    return(working_data)
-
+    try:
+        data = get_data()
+        working_data = get_comment(data)
+        return(working_data)
+    except:
+        return("Encountered error requesting comment. Aborting.\n")
 @app.route('/epochs', methods=['GET'])
 def index_request():
     """
@@ -319,14 +326,17 @@ def index_request():
     Returns:
            result (List): The curated portion of the dataset.
     """
-    data = get_data()
-    working_data = data['ndm']['oem']['body']['segment']['data']['stateVector']
-    offset = request.args.get('offset')
-    limit = request.args.get('limit')
-
-    result = fetch_index_request(working_data, offset, limit)
-    return(result)
-
+    try:
+        data = get_data()
+        working_data = data['ndm']['oem']['body']['segment']['data']['stateVector']
+        offset = request.args.get('offset')
+        limit = request.args.get('limit')
+        
+        result = fetch_index_request(working_data, offset, limit)
+        return(result)
+    except:
+        return("Encountered error fetching epoch data. Aborting.\n")
+    
 @app.route('/epochs/<epoch>', methods=['GET'])
 def epoch_request(epoch):
     """
@@ -337,14 +347,17 @@ def epoch_request(epoch):
     Returns:
            result (List): The associated data with the epoch closest to the one requested by the user.
     """
-    data = get_data()
-    working_data = data['ndm']['oem']['body']['segment']['data']['stateVector']
-
-    result = fetch_epoch_data(working_data, epoch)
-
-    if(result==[]):
-        return("Encountered invalid epoch. Operation aborted.\n")
-    return(result)
+    try:
+        data = get_data()
+        working_data = data['ndm']['oem']['body']['segment']['data']['stateVector']
+        
+        result = fetch_epoch_data(working_data, epoch)
+        
+        if(result==None):
+            return("Encountered invalid epoch. Operation aborted.\n")
+        return(result)
+    except:
+        return("Encountered error fetching specified epoch data. Aborting.\n")
 
 @app.route('/epochs/<epoch>/speed', methods=['GET'])
 def speed_request(epoch):
@@ -356,18 +369,21 @@ def speed_request(epoch):
     Returns:
            result (string): The speed of the station at the requested epoch.
     """
-    data = get_data()
-    working_data = data['ndm']['oem']['body']['segment']['data']['stateVector']
-
-    epoch_request = fetch_epoch_data(working_data, epoch)
-    if(epoch_request==[]):
-        return("Encountered invalid epoch. Operation aborted.\n")
-    
-    x_dot = float(epoch_request['X_DOT']['#text'])
-    y_dot = float(epoch_request['Y_DOT']['#text'])
-    z_dot = float(epoch_request['Z_DOT']['#text'])
-    result = cartesian_velocity_to_speed(x_dot,y_dot,z_dot)
-    return(str(result)+' km/s\n')
+    try:
+        data = get_data()
+        working_data = data['ndm']['oem']['body']['segment']['data']['stateVector']
+        
+        epoch_request = fetch_epoch_data(working_data, epoch)
+        if(epoch_request==[]):
+            return("Encountered invalid epoch. Operation aborted.\n")
+        
+        x_dot = float(epoch_request['X_DOT']['#text'])
+        y_dot = float(epoch_request['Y_DOT']['#text'])
+        z_dot = float(epoch_request['Z_DOT']['#text'])
+        result = cartesian_velocity_to_speed(x_dot,y_dot,z_dot)
+        return(str(result)+' km/s\n')
+    except:
+        return("Encountered error fetching specific speed data. Aborting.\n")
 
 @app.route('/epochs/<epoch>/location', methods=['GET'])
 def location_request(epoch):
@@ -378,32 +394,35 @@ def location_request(epoch):
     Returns:
            result( (List): The locational data of the request epoch.
     """
-    data = get_data()
-    working_data = data['ndm']['oem']['body']['segment']['data']['stateVector']
-    epoch_request = fetch_epoch_data(working_data, epoch)
-
-    if(epoch_request==[]):
-        return("Encountered invalid epoch. Operation aborted.\n")
-
-    coordinates = compute_location_astropy(epoch_request)
-    coordinate_lat = {"#text": coordinates[0], "@units": "deg"}
-    coordinate_lon = {"#text": coordinates[1], "@units": "deg"}
-    coordinate_alt = {"#text": coordinates[2], "@units": "deg"}
-
-    result = {}
-    result["LATITUDE"] = coordinate_lat
-    result["LONGITUDE"] = coordinate_lon
-    result["ALTITUDE"] = coordinate_alt
-
-    geocoder = Nominatim(user_agent='iss_tracker')
-    geo_location = geocoder.reverse((coordinates[0],coordinates[1]), zoom=15, language='en')
-    if(geo_location)==None:
-        geo_location = "Far from any location, perhaps over an ocean."
-        result["GEOLOCATION"] = geo_location
-    result["GEOLOCATION"] = geo_location.address
-    
-    return(result)
-
+    try:
+        data = get_data()
+        working_data = data['ndm']['oem']['body']['segment']['data']['stateVector']
+        epoch_request = fetch_epoch_data(working_data, epoch)
+        
+        if(epoch_request==[]):
+            return("Encountered invalid epoch. Operation aborted.\n")
+            
+        coordinates = compute_location_astropy(epoch_request)
+        coordinate_lat = {"#text": coordinates[0], "@units": "deg"}
+        coordinate_lon = {"#text": coordinates[1], "@units": "deg"}
+        coordinate_alt = {"#text": coordinates[2], "@units": "deg"}
+        
+        result = {}
+        result["LATITUDE"] = coordinate_lat
+        result["LONGITUDE"] = coordinate_lon
+        result["ALTITUDE"] = coordinate_alt
+        
+        geocoder = Nominatim(user_agent='iss_tracker')
+        geo_location = geocoder.reverse((coordinates[0],coordinates[1]), zoom=15, language='en')
+        if(geo_location)==None:
+            geo_location = "Far from any location, perhaps over an ocean."
+            result["GEOLOCATION"] = geo_location
+        else:
+            result["GEOLOCATION"] = geo_location.raw['address']
+            
+        return(result)
+    except:
+        return("Encountered error fetching specific location data. Aborting.\n")
 @app.route('/now', methods=['GET'])
 def now_request():
     """
@@ -413,39 +432,43 @@ def now_request():
     Returns:
            result (List): The associated data with the current epoch, along with its speed.
     """
-    data = get_data()
-    working_data = data['ndm']['oem']['body']['segment']['data']['stateVector']
-
-    current_epoch = get_workable_time()
-
-    epoch_matched = fetch_epoch_data(working_data, current_epoch)
-
-    x_dot = float(epoch_matched['X_DOT']['#text'])
-    y_dot = float(epoch_matched['Y_DOT']['#text'])
-    z_dot = float(epoch_matched['Z_DOT']['#text'])
-    current_speed = cartesian_velocity_to_speed(x_dot,y_dot,z_dot)
-
-    speed_data = {"#text": current_speed, "@units": "km/s"}
-
-    coordinates = compute_location_astropy(epoch_matched)
-    coordinate_lat = {"#text": coordinates[0], "@units": "deg"}
-    coordinate_lon = {"#text": coordinates[1], "@units": "deg"}
-    coordinate_alt = {"#text": coordinates[2], "@units": "deg"}
-
-    epoch_matched["SPEED"] = speed_data
-    epoch_matched["LATITUDE"] = coordinate_lat
-    epoch_matched["LONGITUDE"] = coordinate_lon
-    epoch_matched["ALTITUDE"] = coordinate_alt
-
-    geocoder = Nominatim(user_agent='iss_tracker')
-    geo_location = geocoder.reverse((coordinates[0],coordinates[1]), zoom=15, language='en')
-    if(geo_location)==None:
-        geo_location = "Far from any location, perhaps over an ocean."
-        epoch_matched["GEOLOCATION"] = geo_location
-    epoch_matched["GEOLOCATION"] = geo_location.address
-    
-    result = epoch_matched    
-    return(result)
+    try:
+        data = get_data()
+        working_data = data['ndm']['oem']['body']['segment']['data']['stateVector']
+        
+        current_epoch = get_workable_time()
+        
+        epoch_matched = fetch_epoch_data(working_data, current_epoch)
+        
+        x_dot = float(epoch_matched['X_DOT']['#text'])
+        y_dot = float(epoch_matched['Y_DOT']['#text'])
+        z_dot = float(epoch_matched['Z_DOT']['#text'])
+        current_speed = cartesian_velocity_to_speed(x_dot,y_dot,z_dot)
+        
+        speed_data = {"#text": current_speed, "@units": "km/s"}
+        
+        coordinates = compute_location_astropy(epoch_matched)
+        coordinate_lat = {"#text": coordinates[0], "@units": "deg"}
+        coordinate_lon = {"#text": coordinates[1], "@units": "deg"}
+        coordinate_alt = {"#text": coordinates[2], "@units": "deg"}
+        
+        epoch_matched["SPEED"] = speed_data
+        epoch_matched["LATITUDE"] = coordinate_lat
+        epoch_matched["LONGITUDE"] = coordinate_lon
+        epoch_matched["ALTITUDE"] = coordinate_alt
+        
+        geocoder = Nominatim(user_agent='iss_tracker')
+        geo_location = geocoder.reverse((coordinates[0],coordinates[1]), zoom=15, language='en')
+        if(geo_location)==None:
+            geo_location = "Far from any location, perhaps over an ocean."
+            epoch_matched["GEOLOCATION"] = geo_location
+        else:
+            epoch_matched["GEOLOCATION"] = geo_location.raw['address']
+        
+        result = epoch_matched    
+        return(result)
+    except:
+        return("Encountered error fetching current epoch data. Aborting.\n")
 
 #Main function definition
 def main():
