@@ -34,7 +34,7 @@ def test_convert_iso_dis_8601() -> None:
     This runs tests on the 'convert_iso_dis_8601' function to ensure it returns the proper values and handles errors.
     """
     assert convert_iso_dis_8601('1945-09-02T10:30:17.003z') == '1945-245T10:30:17.003z'
-    assert convert_iso_dis_8601('2004-10-07T00:07:04.123z') == '2004-280T00:07:04.123z'
+    assert convert_iso_dis_8601('2004-10-07T00:07:04.123z') == '2004-281T00:07:04.123z'
 
 def test_fetch_epoch_data(data: List[dict]) -> None:
     """
