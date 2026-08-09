@@ -1,11 +1,17 @@
-FROM python:3.9
+FROM python:3.12-slim
 
-RUN mkdir /app
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+RUN addgroup --system app && adduser --system --ingroup app app
+
 WORKDIR /app
-COPY requirements.txt /app/requirements.txt
-RUN pip install -r /app/requirements.txt
-COPY iss_tracker.py /app/iss_tracker.py
-COPY /test/test_iss_tracker.py /app/test_iss_tracker.py
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-ENTRYPOINT ["python"]
-CMD ["iss_tracker.py"]
+COPY iss_tracker.py .
+
+USER app
+EXPOSE 5000
+
+CMD ["python", "iss_tracker.py", "--host", "0.0.0.0", "--port", "5000"]
