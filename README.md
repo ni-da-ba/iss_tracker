@@ -1,164 +1,91 @@
-# ISS Tracker - Nicholas Darwin Babineaux
-## Project Overview
-This project is a flask application that, once deployed, allows the user to query various types of information about the whereabouts of the International Space Station. Some examples of this are its position in both cartesian and geodesic coordinates, cartesian velocities, its absolute speed, and whatever region on Earth that it may be passing over at a given time. This is achieved by accessing the publically-available ISS positional database and processing its information.
+# ISS Orbital Data Tracker API
 
-The data can be found in XML format at: 
+A small Flask API that retrieves NASA's current International Space Station OEM ephemeris, exposes the source metadata and state vectors, and derives speed and Earth-relative location for a requested epoch.
 
-```https://nasa-public-data.s3.amazonaws.com/iss-coords/current/ISS_OEM/ISS.OEM_J2K_EPH.xml```.
-## File Overviews
-### ```iss_tracker.py```
-This is this primary script containing all functionality, flask routes, and setup for the entire program. It is the file being accessed when building and running the overall program.
-### ```test_iss_tracker.py```
-This is the unit testing script for the program. The flask routes themselves have not been unit tested, but they are designed to basically be extensions of non-flask functionality, all of which is thoroughly tested in this program.
-### ```README.md```
-A file that will give anybody perusing the repository a solid idea of the project, how to run the program, and how it is structured. You are here.
-### ```Dockerfile```
-A file that is necessary for the functionality of the program as a containerized application using Docker but not of great import to the user. Contains instructions on how the application is to be built and deployed using Docker.
-### ```docker-compose.yml```
-A yaml file that contains the second half of the deployment process with Docker. This automates the commands that are usually required to run a containerized program with Docker, making the entire process much easier on the user. 
-### ```requirements.txt```
-A text file that contains the dependencies of this program, streamlining the build process with Docker.
-### ```diagram.png```
-A software diagram that is intended to clarify the overall file and software structure of the project. Contains visual aids that may clarify points of confusion. 
-## Usage
-You may pull this software into a valid directory from Docker Hub using the command as follows: 
-```
-docker pull nidaba936/iss_tracker:1.0
+The project demonstrates API design, XML-to-JSON processing, orbital state-vector calculations, reference-frame conversion with Astropy, deterministic testing, and containerized deployment.
+
+## Architecture
+
+```mermaid
+flowchart TD
+    Client["HTTP client"] --> API["Flask API"]
+    API --> NASA["NASA OEM ephemeris"]
+    API --> Calc["Time, speed, and frame transforms"]
+    Calc --> Geo["Optional reverse geocoding"]
 ```
 
+NASA's OEM document is downloaded when a data-backed endpoint is requested. Pure transformation functions handle epoch matching, velocity magnitude, pagination, and GCRS-to-ITRS/geodetic conversion. Reverse geocoding is deliberately optional: coordinate results remain useful if that external service is unavailable.
 
-With the container in your possession, you may proceed:
+## Quick start
 
-#### ```test_iss_tracker.py```:
+Requirements: Python 3.11 or 3.12.
 
-You may run the unit tests with the command: 
-
-```
-docker run --rm nidaba936/iss_tracker:1.0 test_iss_tracker.py
-```
-
-You will receive an output that is similar to:
-```
-All tests completed.
-```
-Indicating that all tests have been completed without issue.
-
-#### ```iss_tracker.py```
-
-First, you must deploy the application with the command:
-```
-docker-compose up -d
+```bash
+python -m venv .venv
+source .venv/bin/activate          # Windows PowerShell: .venv\Scripts\Activate.ps1
+python -m pip install -r requirements-dev.txt
+python -m pytest -q
+python iss_tracker.py
 ```
 
-Then, you may access the functionality of the program with the basis:
-```
-curl 'localhost:5000'
-```
-After the `5000` but before the ```'```:
+The API will be available at `http://127.0.0.1:5000`. Confirm it without contacting the upstream data service:
 
-`/epochs`: Returns the entire dataset in dictionary format
-
-`/header`: Returns the header of the data set.
-
-`/comment`: Returns the comments of the data set.
-
-`/metadata`: Returns the metadata of the data set.
-
-`/epochs?limit=int&offset=int`: Returns modified list of epochs given query parameters
-```
-limit and offset indices start at max, 0, leave empty for defaults.
-The data that is returned to you will be BETWEEN the INTEGER indices of 'offset' and 'limit'
-
+```bash
+curl http://127.0.0.1:5000/health
 ```
 
-`/epochs/<epoch>`: Returns state vectors for a specific epoch from the data set
-    
-    epoch must be provided in format: YEAR-DAYTHR:MI:SE.MIL
+### Docker
 
-`/epochs/<epoch>/speed`: Returns instantaneous speed for a specific epoch in the data set
-```
-epoch must be provided in format: YEAR-DAYTHR:MI:SE.MIL
-```
-
-`/epochs/<epoch>/location`: Returns locational data for a specific epoch in the data set
-```
-epoch must be provided in format: YEAR-DAYTHR:MI:SE.MIL
+```bash
+docker compose up --build -d
+curl http://localhost:5000/health
+docker compose down
 ```
 
-`/now`: Returns state vectors, locational data, and instantaneous speed for the epoch  that is nearest in time
+The repository builds its own image. An old course image may still exist on Docker Hub, but it is not the reproducible source for the current code.
 
-When you are finished with the program, you may stop the program with:
+## API
+
+| Route | Result |
+|---|---|
+| `GET /health` | Local liveness response; does not call NASA |
+| `GET /header` | OEM document header |
+| `GET /metadata` | OEM segment metadata |
+| `GET /comment` | OEM data comments |
+| `GET /epochs` | State vectors; accepts nonnegative `offset` and `limit` query parameters |
+| `GET /epochs/<epoch>` | State vector nearest to the requested OEM epoch |
+| `GET /epochs/<epoch>/speed` | Velocity magnitude in km/s |
+| `GET /epochs/<epoch>/location` | Latitude, longitude, altitude, and optional reverse-geocoded address |
+| `GET /now` | State vector nearest to current UTC time, plus derived speed and location |
+
+Epoch path parameters use year/day-of-year timestamps such as `2026-221T12:30:00.000Z`.
+
+Examples:
+
+```bash
+curl 'http://localhost:5000/epochs?offset=0&limit=2'
+curl 'http://localhost:5000/epochs/2026-221T12:30:00.000Z/speed'
 ```
-docker-compose down
+
+## Verification
+
+The test suite is deterministic: it uses fixed OEM-shaped fixtures and Flask's test client, with network and geocoding boundaries replaced during API tests. CI also enforces Ruff linting and formatting.
+
+```bash
+python -m pytest -q
 ```
-#### Sample Output
 
-All output will appear in the form of some list of data, except for `/epochs/<epoch>/speed`, which will simply provide a speed value.
+GitHub Actions runs the suite on Python 3.11 and 3.12 and independently verifies that the Docker image builds.
 
-For instance, at some runtime, the result of the `/now` route was:
+## Data and assumptions
 
-```
-{
-  "ALTITUDE": {
-    "#text": 414.9086849816373,
-    "@units": "km"
-  },
-  "EPOCH": "2024-069T02:26:30.000Z",
-  "GEOLOCATION": {
-    "ISO3166-2-lvl4": "MX-YUC",
-    "country": "Mexico",
-    "country_code": "mx",
-    "county": "Tahmek",
-    "locality": "San Francisco",
-    "state": "Yucat\u00e1n"
-  },
-  "LATITUDE": {
-    "#text": 20.873190044190952,
-    "@units": "deg"
-  },
-  "LONGITUDE": {
-    "#text": -89.2409172937796,
-    "@units": "deg"
-  },
-  "SPEED": {
-    "#text": 7.666890088703673,
-    "@units": "km/s"
-  },
-  "X": {
-    "#text": "-2018.1368447422999",
-    "@units": "km"
-  },
-  "X_DOT": {
-    "#text": "-4.1603832442146498",
-    "@units": "km/s"
-  },
-  "Y": {
-    "#text": "6018.71000188982",
-    "@units": "km"
-  },
-  "Y_DOT": {
-    "#text": "-3.55181061949399",
-    "@units": "km/s"
-  },
-  "Z": {
-    "#text": "2410.6230405154602",
-    "@units": "km"
-  },
-  "Z_DOT": {
-    "#text": "5.3718764148824496",
-    "@units": "km/s"
-  }
-}
-```
-Going down the list of data, you will find the altitude of the station and its units, the epoch at which this data was recorded, the region of the world over which the station is located, the latitude of the station and its units, and so on, so forth. All data outputted by this program has units and labels included such that it is easy to read and understand.
-## Diagram
-![diagram](https://github.com/ni-da-ba/iss_tracker/assets/142941255/04bbbea3-6990-47cd-a2fe-9fa87c4ce8e9)
+- Source: [NASA public ISS OEM ephemeris](https://nasa-public-data.s3.amazonaws.com/iss-coords/current/ISS_OEM/ISS.OEM_J2K_EPH.xml).
+- Position and velocity components are interpreted using the units supplied by the OEM state vectors.
+- The nearest-epoch lookup compares complete UTC timestamps, not only minute fields.
+- Astropy converts the GCRS position to ITRS before geodetic latitude, longitude, and altitude are reported.
+- Reverse-geocoded place names come from OpenStreetMap's Nominatim service and may be absent over oceans or during service failures.
+- This is an educational data service, not flight software or an operational navigation product.
 
-The user of the program will pull this container from a registry of images and then activate the program. When queries are supplied to the ongoing flask application through the ports, a request is sent to the ISS website on the internet, the reply to which is the data set that will be worked on.
+## Project history
 
-According to the query of the user, some work is done upon the data, and then the requested results are sent to screen. After this point, the user will visually receive their requested data, and will be able to continue sending queries until they choose to shut off the program.
-
-## Credits
-The code within these files is almost entirely of my own creation. Limited inspiration has been taken from the university. Credit should be so dealt firstly to me, and secondly to the university.
-## Further Questions
-If you have any further questions or run into issues with the project that you cannot seem to figure out yourself, you may contact the curator of this repo (me) and I will respond promptly.
+This began as an individual university software-engineering project in 2024. The original API and calculations were authored by Nicholas Babineaux; the repository was later hardened as a portfolio project with deterministic tests, explicit failure handling, modern container instructions, and documentation of its assumptions and limits.

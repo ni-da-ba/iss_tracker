@@ -1,6 +1,5 @@
+astropy==8.0.1
 Flask==3.0.2
-pytest==8.0.0
-xmltodict
-requests
-geopy
-astropy
+geopy==2.5.0
+requests==2.34.2
+xmltodict==1.0.4
