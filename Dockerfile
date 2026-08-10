@@ -14,4 +14,7 @@ COPY iss_tracker.py .
 USER app
 EXPOSE 5000
 
-CMD ["python", "iss_tracker.py", "--host", "0.0.0.0", "--port", "5000"]
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/health', timeout=2)"]
+
+CMD ["gunicorn", "--bind=0.0.0.0:5000", "--workers=2", "--threads=4", "--access-logfile=-", "iss_tracker:app"]

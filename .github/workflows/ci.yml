@@ -15,8 +15,8 @@ jobs:
       matrix:
         python-version: ["3.11", "3.12"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
@@ -30,5 +30,13 @@ jobs:
   container:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - run: docker build --tag iss-tracker:test .
+      - uses: actions/checkout@v7
+      - name: Build image
+        run: docker build --tag iss-tracker:test .
+      - name: Verify container startup and health
+        run: |
+          docker run --detach --name iss-tracker-test --publish 5000:5000 iss-tracker:test
+          trap 'docker logs iss-tracker-test; docker rm --force iss-tracker-test' EXIT
+          curl --fail --silent --show-error \
+            --retry 10 --retry-connrefused --retry-delay 1 \
+            http://127.0.0.1:5000/health

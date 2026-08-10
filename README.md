@@ -1,5 +1,7 @@
 # ISS Orbital Data Tracker API
 
+[![CI](https://github.com/ni-da-ba/iss_tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/ni-da-ba/iss_tracker/actions/workflows/ci.yml)
+
 A small Flask API that retrieves NASA's current International Space Station OEM ephemeris, exposes the source metadata and state vectors, and derives speed and Earth-relative location for a requested epoch.
 
 The project demonstrates API design, XML-to-JSON processing, orbital state-vector calculations, reference-frame conversion with Astropy, deterministic testing, and containerized deployment.
@@ -42,7 +44,7 @@ curl http://localhost:5000/health
 docker compose down
 ```
 
-The repository builds its own image. An old course image may still exist on Docker Hub, but it is not the reproducible source for the current code.
+The image runs the Flask application through Gunicorn as a non-root user and includes a local health check. CI builds the image, starts the service, and requires `/health` to answer successfully. An old course image may still exist on Docker Hub, but it is not the reproducible source for the current code.
 
 ## API
 
@@ -75,7 +77,7 @@ The test suite is deterministic: it uses fixed OEM-shaped fixtures and Flask's t
 python -m pytest -q
 ```
 
-GitHub Actions runs the suite on Python 3.11 and 3.12 and independently verifies that the Docker image builds.
+GitHub Actions runs the suite on Python 3.11 and 3.12 and independently verifies that the Docker image builds, starts, and serves its health endpoint.
 
 ## Data and assumptions
 
@@ -84,8 +86,13 @@ GitHub Actions runs the suite on Python 3.11 and 3.12 and independently verifies
 - The nearest-epoch lookup compares complete UTC timestamps, not only minute fields.
 - Astropy converts the GCRS position to ITRS before geodetic latitude, longitude, and altitude are reported.
 - Reverse-geocoded place names come from OpenStreetMap's Nominatim service and may be absent over oceans or during service failures.
+- Data-backed routes fetch the current OEM document on demand; this compact educational service does not cache upstream responses.
 - This is an educational data service, not flight software or an operational navigation product.
 
 ## Project history
 
 This began as an individual university software-engineering project in 2024. The original API and calculations were authored by Nicholas Babineaux; the repository was later hardened as a portfolio project with deterministic tests, explicit failure handling, modern container instructions, and documentation of its assumptions and limits.
+
+## Maintenance
+
+The current `main` branch is the supported portfolio version. Dependency updates are proposed automatically, and sensitive security reports should follow [SECURITY.md](SECURITY.md). The source is available under the [MIT License](LICENSE).
